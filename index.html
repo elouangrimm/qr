@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Grid — Hand-Drawing Helper</title>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+    <style>
+        /* ========== DESIGN TOKENS (from Elouan's system) ========== */
+        :root {
+            --stone-050: #fafaf9;
+            --stone-100: #f5f5f4;
+            --stone-200: #e7e5e4;
+            --stone-300: #d6d3d1;
+            --stone-400: #a8a29e;
+            --stone-500: #78716c;
+            --stone-600: #57534e;
+            --stone-700: #44403c;
+            --stone-800: #292524;
+            --stone-900: #1c1917;
+            --stone-950: #0c0a09;
+
+            --red: #ef4444;
+            --orange: #ff8046;
+            --amber: #f59e0b;
+            --yellow: #ffff46;
+            --lime: #84cc16;
+            --green: #22c55e;
+            --emerald: #10b981;
+            --teal: #14b8a6;
+            --cyan: #46ccff;
+            --sky: #0ea5e9;
+            --blue: #3b82f6;
+            --indigo: #6366f1;
+            --violet: #8b5cf6;
+            --purple: #8043ff;
+            --fuchsia: #d946ef;
+            --pink: #ff80de;
+            --rose: #f43f5e;
+
+            --bg: var(--stone-950);
+            --bg-raised: var(--stone-900);
+            --bg-surface: var(--stone-800);
+            --border: var(--stone-800);
+            --border-strong: var(--stone-500);
+            --text: var(--stone-200);
+            --text-muted: var(--stone-400);
+            --text-faint: var(--stone-500);
+            --text-bright: var(--stone-100);
+            --accent: var(--blue);
+            --accent-hover: #5193f8;
+            --success: var(--green);
+            --danger: var(--red);
+            --warning: var(--amber);
+
+            --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --font-mono: "JetBrains Mono", "SF Mono", "Fira Code", "Roboto Mono", "Cascadia Code", monospace;
+            --line-height: 1.6;
+            --line-height-tight: 1.2;
+
+            --cell-size: 20px;
+            --grid-color: var(--stone-600);
+            --grid-width: 1px;
+        }
+
+        /* ========== RESET ========== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            border-radius: 0 !important;
+        }
+
+        /* ========== BASE ========== */
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: var(--font-sans);
+            line-height: var(--line-height);
+            min-height: 100vh;
+        }
+
+        ::selection {
+            background-color: var(--indigo);
+            color: var(--stone-050);
+        }
+
+        /* ========== SCROLLBAR ========== */
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--bg-surface); }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-faint); }
+
+        /* ========== LAYOUT ========== */
+        .app {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 32px 80px;
+        }
+
+        header {
+            margin-bottom: 40px;
+        }
+
+        header h1 {
+            font-family: var(--font-mono);
+            font-size: 2em;
+            font-weight: 700;
+            color: var(--text-bright);
+            line-height: var(--line-height-tight);
+        }
+
+        header h1 span {
+            color: var(--accent);
+        }
+
+        header p {
+            color: var(--text-muted);
+            margin-top: 6px;
+            font-size: 0.95rem;
+        }
+
+        /* ========== CONTROLS ========== */
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: flex-end;
+            margin-bottom: 32px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .control-group.grow {
+            flex: 1;
+            min-width: 240px;
+        }
+
+        label {
+            display: block;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        input, select {
+            padding: 10px 12px;
+            background-color: var(--bg);
+            border: 1px solid var(--border-strong);
+            color: var(--text-bright);
+            font-family: inherit;
+            font-size: 1rem;
+            line-height: var(--line-height);
+            width: 100%;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        input::placeholder {
+            color: var(--text-faint);
+            opacity: 0.6;
+        }
+
+        select {
+            cursor: pointer;
+            -webkit-appearance: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2378716c' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            padding-right: 32px;
+        }
+
+        button {
+            display: inline-block;
+            padding: 10px 24px;
+            border: none;
+            background-color: var(--accent);
+            color: var(--stone-050);
+            font-size: 1rem;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.2s;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        button:hover {
+            background-color: var(--accent-hover);
+            transform: translateY(-2px);
+        }
+
+        button:focus {
+            outline: 2px solid var(--accent);
+        }
+
+        button.btn-secondary {
+            background-color: var(--bg-surface);
+            color: var(--text);
+        }
+
+        button.btn-secondary:hover {
+            background-color: var(--text-faint);
+        }
+
+        /* ========== INFO BAR ========== */
+        .info-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+            padding: 16px 20px;
+            background-color: var(--bg-raised);
+            border: 1px solid var(--border);
+            margin-bottom: 24px;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+        }
+
+        .info-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .info-label {
+            color: var(--text-faint);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 0.75rem;
+        }
+
+        .info-value {
+            color: var(--text-bright);
+            font-weight: 600;
+        }
+
+        .info-value.accent {
+            color: var(--accent);
+        }
+
+        .info-divider {
+            width: 1px;
+            background: var(--border);
+            align-self: stretch;
+        }
+
+        /* ========== TOOLBAR ========== */
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+
+        .toolbar button {
+            padding: 8px 16px;
+            font-size: 0.85rem;
+        }
+
+        .toolbar .spacer {
+            flex: 1;
+        }
+
+        .zoom-controls {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .zoom-controls button {
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .zoom-controls span {
+            min-width: 48px;
+            text-align: center;
+            color: var(--text-bright);
+        }
+
+        /* ========== COORDINATE DISPLAY ========== */
+        .coord-display {
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            padding: 6px 12px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            min-width: 120px;
+            text-align: center;
+        }
+
+        .coord-display .coord-val {
+            color: var(--cyan);
+            font-weight: 600;
+        }
+
+        /* ========== QR GRID WRAPPER ========== */
+        .qr-wrapper {
+            overflow: auto;
+            border: 1px solid var(--border);
+            background-color: var(--bg-raised);
+            padding: 8px;
+            position: relative;
+        }
+
+        .qr-container {
+            display: inline-block;
+            position: relative;
+        }
+
+        /* The canvas holding the QR grid */
+        #qr-canvas {
+            display: block;
+            image-rendering: pixelated;
+        }
+
+        /* ========== EMPTY STATE ========== */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 80px 20px;
+            color: var(--text-faint);
+            text-align: center;
+            gap: 12px;
+        }
+
+        .empty-state .icon {
+            font-size: 3rem;
+            opacity: 0.4;
+            margin-bottom: 8px;
+        }
+
+        .empty-state p {
+            font-size: 0.95rem;
+        }
+
+        .empty-state .hint {
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            color: var(--text-faint);
+            opacity: 0.6;
+        }
+
+        /* ========== LEGEND ========== */
+        .legend {
+            margin-top: 32px;
+            padding: 20px 24px;
+            background-color: var(--bg-raised);
+            border: 1px solid var(--border);
+        }
+
+        .legend h3 {
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-bright);
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .legend-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 8px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .legend-swatch {
+            width: 20px;
+            height: 20px;
+            border: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        /* ========== KEYBOARD SHORTCUTS ========== */
+        .shortcuts {
+            margin-top: 20px;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            color: var(--text-faint);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .shortcuts kbd {
+            display: inline-block;
+            padding: 2px 6px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        /* ========== HIGHLIGHT MODES ========== */
+        .highlight-option {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            color: var(--text);
+            user-select: none;
+            padding: 6px 12px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            transition: border-color 0.15s;
+        }
+
+        .highlight-option:hover {
+            border-color: var(--text-faint);
+        }
+
+        .highlight-option.active {
+            border-color: var(--accent);
+            color: var(--text-bright);
+        }
+
+        .highlight-option input {
+            width: auto;
+            margin: 0;
+            cursor: pointer;
+        }
+
+        /* ========== RESPONSIVE ========== */
+        @media (max-width: 640px) {
+            .app {
+                padding: 20px 16px 60px;
+            }
+
+            header h1 {
+                font-size: 1.5em;
+            }
+
+            .controls {
+                flex-direction: column;
+            }
+
+            .info-bar {
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .info-divider {
+                width: 100%;
+                height: 1px;
+            }
+        }
+
+        /* ========== PRINT STYLES ========== */
+        @media print {
+            body {
+                background: white;
+                color: black;
+            }
+
+            .controls, .toolbar, .legend, .shortcuts, header p,
+            .info-bar, .coord-display {
+                display: none !important;
+            }
+
+            .qr-wrapper {
+                border: none;
+                background: white;
+                padding: 0;
+                overflow: visible;
+            }
+
+            #qr-canvas {
+                max-width: 100%;
+                height: auto !important;
+            }
+
+            header h1 {
+                color: black;
+                font-size: 1.2em;
+                margin-bottom: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <header>
+            <h1>QR <span>Grid</span></h1>
+            <p>Generate QR codes with numbered grids for hand-drawing on graph paper.</p>
+        </header>
+
+        <!-- Input controls -->
+        <div class="controls">
+            <div class="control-group grow">
+                <label for="qr-input">Content</label>
+                <input type="text" id="qr-input" placeholder="Enter text, URL, or any data…" autofocus>
+            </div>
+            <div class="control-group">
+                <label for="ec-level">Error Correction</label>
+                <select id="ec-level">
+                    <option value="L">Low (7%)</option>
+                    <option value="M" selected>Medium (15%)</option>
+                    <option value="Q">Quartile (25%)</option>
+                    <option value="H">High (30%)</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <button id="generate-btn">Generate</button>
+            </div>
+        </div>
+
+        <!-- Info bar (hidden until QR is generated) -->
+        <div class="info-bar hidden" id="info-bar">
+            <div class="info-item">
+                <span class="info-label">Size</span>
+                <span class="info-value accent" id="info-size">—</span>
+            </div>
+            <div class="info-divider"></div>
+            <div class="info-item">
+                <span class="info-label">Modules</span>
+                <span class="info-value" id="info-modules">—</span>
+            </div>
+            <div class="info-divider"></div>
+            <div class="info-item">
+                <span class="info-label">Version</span>
+                <span class="info-value" id="info-version">—</span>
+            </div>
+            <div class="info-divider"></div>
+            <div class="info-item">
+                <span class="info-label">EC Level</span>
+                <span class="info-value" id="info-ec">—</span>
+            </div>
+            <div class="info-divider"></div>
+            <div class="info-item">
+                <span class="info-label">Dark Cells</span>
+                <span class="info-value" id="info-dark">—</span>
+            </div>
+            <div class="info-divider"></div>
+            <div class="info-item">
+                <span class="info-label">Light Cells</span>
+                <span class="info-value" id="info-light">—</span>
+            </div>
+        </div>
+
+        <!-- Toolbar -->
+        <div class="toolbar hidden" id="toolbar">
+            <div class="zoom-controls">
+                <button id="zoom-out" title="Zoom out">−</button>
+                <span id="zoom-level">20px</span>
+                <button id="zoom-in" title="Zoom in">+</button>
+            </div>
+
+            <label class="highlight-option" title="Highlight row/column on hover">
+                <input type="checkbox" id="crosshair-toggle" checked>
+                Crosshair
+            </label>
+
+            <label class="highlight-option" title="Color-code QR regions">
+                <input type="checkbox" id="region-toggle">
+                Show Regions
+            </label>
+
+            <div class="spacer"></div>
+
+            <div class="coord-display" id="coord-display">
+                <span class="coord-val">—</span>
+            </div>
+
+            <button class="btn-secondary" id="export-btn" title="Download as PNG">Export PNG</button>
+            <button class="btn-secondary" id="print-btn" title="Print the grid">Print</button>
+        </div>
+
+        <!-- QR output area -->
+        <div class="qr-wrapper" id="qr-wrapper">
+            <div class="empty-state" id="empty-state">
+                <div class="icon">⬚</div>
+                <p>Enter your content above and hit <strong>Generate</strong></p>
+                <span class="hint">or press Enter</span>
+            </div>
+            <div class="qr-container hidden" id="qr-container">
+                <canvas id="qr-canvas"></canvas>
+            </div>
+        </div>
+
+        <!-- Legend -->
+        <div class="legend hidden" id="legend">
+            <h3>Legend</h3>
+            <div class="legend-grid" id="legend-grid">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+
+        <!-- Keyboard shortcuts -->
+        <div class="shortcuts">
+            <span><kbd>Enter</kbd> Generate</span>
+            <span><kbd>+</kbd> / <kbd>−</kbd> Zoom</span>
+            <span><kbd>R</kbd> Toggle regions</span>
+            <span><kbd>C</kbd> Toggle crosshair</span>
+            <span><kbd>P</kbd> Print</span>
+            <span><kbd>E</kbd> Export PNG</span>
+        </div>
+    </div>
+
+    <script>
+        (() => {
+            // ==================== STATE ====================
+            let cellSize = 20;
+            let qrData = null;       // 2D array of booleans
+            let qrModuleCount = 0;
+            let qrVersion = 0;
+            let showRegions = false;
+            let showCrosshair = true;
+            let hoverRow = -1;
+            let hoverCol = -1;
+
+            // ==================== DOM REFS ====================
+            const inputEl = document.getElementById('qr-input');
+            const ecSelect = document.getElementById('ec-level');
+            const generateBtn = document.getElementById('generate-btn');
+            const canvas = document.getElementById('qr-canvas');
+            const ctx = canvas.getContext('2d');
+            const infoBar = document.getElementById('info-bar');
+            const toolbar = document.getElementById('toolbar');
+            const emptyState = document.getElementById('empty-state');
+            const qrContainer = document.getElementById('qr-container');
+            const qrWrapper = document.getElementById('qr-wrapper');
+            const coordDisplay = document.getElementById('coord-display');
+            const legend = document.getElementById('legend');
+            const legendGrid = document.getElementById('legend-grid');
+
+            // ==================== QR GENERATION ====================
+            function generateQR() {
+                const text = inputEl.value.trim();
+                if (!text) return;
+
+                const ecLevel = ecSelect.value;
+                const typeNumber = 0; // auto-detect
+
+                try {
+                    const qr = qrcode(typeNumber, ecLevel);
+                    qr.addData(text);
+                    qr.make();
+
+                    qrModuleCount = qr.getModuleCount();
+                    qrVersion = Math.round((qrModuleCount - 21) / 4) + 1;
+                    if (qrVersion < 1) qrVersion = 1;
+
+                    // Build 2D array
+                    qrData = [];
+                    let darkCount = 0;
+                    for (let r = 0; r < qrModuleCount; r++) {
+                        qrData[r] = [];
+                        for (let c = 0; c < qrModuleCount; c++) {
+                            const isDark = qr.isDark(r, c);
+                            qrData[r][c] = isDark;
+                            if (isDark) darkCount++;
+                        }
+                    }
+
+                    // Update info
+                    const totalCells = qrModuleCount * qrModuleCount;
+                    document.getElementById('info-size').textContent = `${qrModuleCount} × ${qrModuleCount}`;
+                    document.getElementById('info-modules').textContent = totalCells.toLocaleString();
+                    document.getElementById('info-version').textContent = qrVersion;
+                    document.getElementById('info-ec').textContent = { L: 'Low', M: 'Medium', Q: 'Quartile', H: 'High' }[ecLevel];
+                    document.getElementById('info-dark').textContent = `${darkCount} (${Math.round(darkCount / totalCells * 100)}%)`;
+                    document.getElementById('info-light').textContent = `${totalCells - darkCount} (${Math.round((totalCells - darkCount) / totalCells * 100)}%)`;
+
+                    // Show UI
+                    infoBar.classList.remove('hidden');
+                    toolbar.classList.remove('hidden');
+                    emptyState.classList.add('hidden');
+                    qrContainer.classList.remove('hidden');
+                    legend.classList.remove('hidden');
+
+                    renderLegend();
+                    draw();
+                } catch (e) {
+                    alert('Error generating QR code: ' + e.message);
+                }
+            }
+
+            // ==================== REGION DETECTION ====================
+            // Identifies which region a module belongs to
+            function getRegion(row, col) {
+                const n = qrModuleCount;
+                // Finder patterns (top-left, top-right, bottom-left) — 7×7 + 1 separator
+                if (row < 9 && col < 9) return 'finder-tl';
+                if (row < 9 && col >= n - 8) return 'finder-tr';
+                if (row >= n - 8 && col < 9) return 'finder-bl';
+
+                // Timing patterns
+                if (row === 6) return 'timing';
+                if (col === 6) return 'timing';
+
+                // Alignment patterns (for version >= 2)
+                if (qrVersion >= 2) {
+                    const alignPos = getAlignmentPositions(qrVersion);
+                    for (const ar of alignPos) {
+                        for (const ac of alignPos) {
+                            // Skip if overlapping finder
+                            if (ar < 9 && ac < 9) continue;
+                            if (ar < 9 && ac >= n - 8) continue;
+                            if (ar >= n - 8 && ac < 9) continue;
+                            if (Math.abs(row - ar) <= 2 && Math.abs(col - ac) <= 2) {
+                                return 'alignment';
+                            }
+                        }
+                    }
+                }
+
+                // Format info
+                if (row === 8 && (col < 9 || col >= n - 8)) return 'format';
+                if (col === 8 && (row < 9 || row >= n - 7)) return 'format';
+
+                // Version info (version >= 7)
+                if (qrVersion >= 7) {
+                    if (row < 6 && col >= n - 11 && col < n - 8) return 'version';
+                    if (col < 6 && row >= n - 11 && row < n - 8) return 'version';
+                }
+
+                return 'data';
+            }
+
+            function getAlignmentPositions(version) {
+                // Alignment pattern center positions per version
+                const table = {
+                    2: [6, 18], 3: [6, 22], 4: [6, 26], 5: [6, 30], 6: [6, 34],
+                    7: [6, 22, 38], 8: [6, 24, 42], 9: [6, 26, 46], 10: [6, 28, 50],
+                    11: [6, 30, 54], 12: [6, 32, 58], 13: [6, 34, 62], 14: [6, 26, 46, 66],
+                    15: [6, 26, 48, 70], 16: [6, 26, 50, 74], 17: [6, 30, 54, 78],
+                    18: [6, 30, 56, 82], 19: [6, 30, 58, 86], 20: [6, 34, 62, 90],
+                    21: [6, 28, 50, 72, 94], 22: [6, 26, 50, 74, 98], 23: [6, 30, 54, 78, 102],
+                    24: [6, 28, 54, 80, 106], 25: [6, 32, 58, 84, 110], 26: [6, 30, 58, 86, 114],
+                    27: [6, 34, 62, 90, 118], 28: [6, 26, 50, 74, 98, 122],
+                    29: [6, 30, 54, 78, 102, 126], 30: [6, 26, 52, 78, 104, 130],
+                    31: [6, 30, 56, 82, 108, 134], 32: [6, 34, 60, 86, 112, 138],
+                    33: [6, 30, 58, 86, 114, 142], 34: [6, 34, 62, 90, 118, 146],
+                    35: [6, 30, 54, 78, 102, 126, 150], 36: [6, 24, 50, 76, 102, 128, 154],
+                    37: [6, 28, 54, 80, 106, 132, 158], 38: [6, 32, 58, 84, 110, 136, 162],
+                    39: [6, 26, 54, 82, 110, 138, 166], 40: [6, 30, 58, 86, 114, 142, 170]
+                };
+                return table[version] || [];
+            }
+
+            // Region color map
+            const regionColors = {
+                'finder-tl':  { dark: '#c026d3', light: '#f0abfc' },  // fuchsia
+                'finder-tr':  { dark: '#c026d3', light: '#f0abfc' },
+                'finder-bl':  { dark: '#c026d3', light: '#f0abfc' },
+                'timing':     { dark: '#0ea5e9', light: '#7dd3fc' },  // sky
+                'alignment':  { dark: '#f59e0b', light: '#fcd34d' },  // amber
+                'format':     { dark: '#10b981', light: '#6ee7b7' },  // emerald
+                'version':    { dark: '#ef4444', light: '#fca5a5' },  // red
+                'data':       { dark: '#1c1917', light: '#fafaf9' },  // stone (normal)
+            };
+
+            const regionLabels = {
+                'finder-tl': 'Finder Pattern',
+                'finder-tr': 'Finder Pattern',
+                'finder-bl': 'Finder Pattern',
+                'timing': 'Timing Pattern',
+                'alignment': 'Alignment Pattern',
+                'format': 'Format Info',
+                'version': 'Version Info',
+                'data': 'Data / EC',
+            };
+
+            function renderLegend() {
+                legendGrid.innerHTML = '';
+                const shown = new Set();
+                const items = [
+                    { key: 'finder-tl', label: 'Finder Pattern' },
+                    { key: 'timing', label: 'Timing Pattern' },
+                    { key: 'alignment', label: 'Alignment Pattern' },
+                    { key: 'format', label: 'Format Info' },
+                    { key: 'version', label: 'Version Info' },
+                    { key: 'data', label: 'Data / Error Correction' },
+                ];
+                items.forEach(item => {
+                    if (item.key === 'alignment' && qrVersion < 2) return;
+                    if (item.key === 'version' && qrVersion < 7) return;
+
+                    const el = document.createElement('div');
+                    el.className = 'legend-item';
+                    const swatch = document.createElement('div');
+                    swatch.className = 'legend-swatch';
+                    swatch.style.backgroundColor = regionColors[item.key].dark;
+                    el.appendChild(swatch);
+                    const lbl = document.createElement('span');
+                    lbl.textContent = item.label;
+                    el.appendChild(lbl);
+                    legendGrid.appendChild(el);
+                });
+
+                // Normal dark/light
+                [
+                    { color: '#1c1917', label: 'Dark Module (fill in)' },
+                    { color: '#fafaf9', label: 'Light Module (leave empty)' },
+                ].forEach(item => {
+                    const el = document.createElement('div');
+                    el.className = 'legend-item';
+                    const swatch = document.createElement('div');
+                    swatch.className = 'legend-swatch';
+                    swatch.style.backgroundColor = item.color;
+                    el.appendChild(swatch);
+                    const lbl = document.createElement('span');
+                    lbl.textContent = item.label;
+                    el.appendChild(lbl);
+                    legendGrid.appendChild(el);
+                });
+            }
+
+            // ==================== DRAWING ====================
+            function draw() {
+                if (!qrData) return;
+
+                const n = qrModuleCount;
+                const labelSize = Math.max(20, cellSize);
+                const totalW = labelSize + n * cellSize;
+                const totalH = labelSize + n * cellSize;
+
+                canvas.width = totalW;
+                canvas.height = totalH;
+
+                ctx.clearRect(0, 0, totalW, totalH);
+
+                // Background
+                ctx.fillStyle = '#fafaf9';
+                ctx.fillRect(labelSize, labelSize, n * cellSize, n * cellSize);
+
+                // Draw crosshair highlight BEFORE cells so it's behind
+                if (showCrosshair && hoverRow >= 0 && hoverCol >= 0) {
+                    ctx.fillStyle = 'rgba(59, 130, 246, 0.08)';
+                    // Row highlight
+                    ctx.fillRect(labelSize, labelSize + hoverRow * cellSize, n * cellSize, cellSize);
+                    // Col highlight
+                    ctx.fillRect(labelSize + hoverCol * cellSize, labelSize, cellSize, n * cellSize);
+                }
+
+                // Draw modules
+                for (let r = 0; r < n; r++) {
+                    for (let c = 0; c < n; c++) {
+                        const x = labelSize + c * cellSize;
+                        const y = labelSize + r * cellSize;
+                        const isDark = qrData[r][c];
+
+                        if (showRegions) {
+                            const region = getRegion(r, c);
+                            const colors = regionColors[region];
+                            ctx.fillStyle = isDark ? colors.dark : colors.light;
+                        } else {
+                            ctx.fillStyle = isDark ? '#1c1917' : '#fafaf9';
+                        }
+
+                        ctx.fillRect(x, y, cellSize, cellSize);
+                    }
+                }
+
+                // Draw grid lines
+                ctx.strokeStyle = showRegions ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.25)';
+                ctx.lineWidth = 1;
+
+                // Use 0.5 offset for crisp 1px lines
+                ctx.beginPath();
+                for (let i = 0; i <= n; i++) {
+                    const x = labelSize + i * cellSize + 0.5;
+                    ctx.moveTo(x, labelSize);
+                    ctx.lineTo(x, labelSize + n * cellSize);
+
+                    const y = labelSize + i * cellSize + 0.5;
+                    ctx.moveTo(labelSize, y);
+                    ctx.lineTo(labelSize + n * cellSize, y);
+                }
+                ctx.stroke();
+
+                // Major grid every 5 cells (useful for counting on graph paper)
+                ctx.strokeStyle = showRegions ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.45)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                for (let i = 0; i <= n; i += 5) {
+                    const x = labelSize + i * cellSize + 0.5;
+                    ctx.moveTo(x, labelSize);
+                    ctx.lineTo(x, labelSize + n * cellSize);
+
+                    const y = labelSize + i * cellSize + 0.5;
+                    ctx.moveTo(labelSize, y);
+                    ctx.lineTo(labelSize + n * cellSize, y);
+                }
+                ctx.stroke();
+
+                // Outer border
+                ctx.strokeStyle = '#1c1917';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(labelSize, labelSize, n * cellSize, n * cellSize);
+
+                // Draw crosshair lines on top
+                if (showCrosshair && hoverRow >= 0 && hoverCol >= 0) {
+                    ctx.strokeStyle = 'rgba(59, 130, 246, 0.6)';
+                    ctx.lineWidth = 2;
+                    // Horizontal
+                    const hy = labelSize + hoverRow * cellSize + 0.5;
+                    ctx.beginPath();
+                    ctx.moveTo(labelSize, hy);
+                    ctx.lineTo(labelSize + n * cellSize, hy);
+                    ctx.moveTo(labelSize, hy + cellSize);
+                    ctx.lineTo(labelSize + n * cellSize, hy + cellSize);
+                    ctx.stroke();
+                    // Vertical
+                    const hx = labelSize + hoverCol * cellSize + 0.5;
+                    ctx.beginPath();
+                    ctx.moveTo(hx, labelSize);
+                    ctx.lineTo(hx, labelSize + n * cellSize);
+                    ctx.moveTo(hx + cellSize, labelSize);
+                    ctx.lineTo(hx + cellSize, labelSize + n * cellSize);
+                    ctx.stroke();
+                }
+
+                // Row & Column numbers
+                const fontSize = Math.max(9, Math.min(cellSize * 0.55, 14));
+                ctx.font = `600 ${fontSize}px ${getComputedStyle(document.documentElement).getPropertyValue('--font-mono').trim().split(',')[0].replace(/"/g, '')}, monospace`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                for (let i = 0; i < n; i++) {
+                    // Column numbers (top)
+                    const cx = labelSize + i * cellSize + cellSize / 2;
+                    const cy = labelSize / 2;
+                    ctx.fillStyle = (showCrosshair && i === hoverCol) ? '#3b82f6' : '#78716c';
+                    ctx.fillText(i, cx, cy);
+
+                    // Row numbers (left)
+                    const rx = labelSize / 2;
+                    const ry = labelSize + i * cellSize + cellSize / 2;
+                    ctx.fillStyle = (showCrosshair && i === hoverRow) ? '#3b82f6' : '#78716c';
+                    ctx.fillText(i, rx, ry);
+                }
+
+                // Every-5 row/col number bolder
+                ctx.font = `700 ${fontSize}px ${getComputedStyle(document.documentElement).getPropertyValue('--font-mono').trim().split(',')[0].replace(/"/g, '')}`, 'monospace';
+                for (let i = 0; i < n; i += 5) {
+                    const cx = labelSize + i * cellSize + cellSize / 2;
+                    ctx.fillStyle = (showCrosshair && i === hoverCol) ? '#3b82f6' : '#44403c';
+                    ctx.fillText(i, cx, labelSize / 2);
+
+                    const ry = labelSize + i * cellSize + cellSize / 2;
+                    ctx.fillStyle = (showCrosshair && i === hoverRow) ? '#3b82f6' : '#44403c';
+                    ctx.fillText(i, labelSize / 2, ry);
+                }
+            }
+
+            // ==================== INTERACTION ====================
+
+            // Mouse tracking for crosshair & coordinates
+            canvas.addEventListener('mousemove', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                const mx = (e.clientX - rect.left) * scaleX;
+                const my = (e.clientY - rect.top) * scaleY;
+
+                const labelSize = Math.max(20, cellSize);
+                const col = Math.floor((mx - labelSize) / cellSize);
+                const row = Math.floor((my - labelSize) / cellSize);
+
+                if (row >= 0 && row < qrModuleCount && col >= 0 && col < qrModuleCount) {
+                    hoverRow = row;
+                    hoverCol = col;
+                    const isDark = qrData[row][col];
+                    const region = getRegion(row, col);
+                    const regionLabel = regionLabels[region] || region;
+                    coordDisplay.innerHTML = `<span class="coord-val">R${row} C${col}</span> · ${isDark ? '■' : '□'} · ${regionLabel}`;
+                } else {
+                    hoverRow = -1;
+                    hoverCol = -1;
+                    coordDisplay.innerHTML = '<span class="coord-val">—</span>';
+                }
+                draw();
+            });
+
+            canvas.addEventListener('mouseleave', () => {
+                hoverRow = -1;
+                hoverCol = -1;
+                coordDisplay.innerHTML = '<span class="coord-val">—</span>';
+                draw();
+            });
+
+            // ==================== ZOOM ====================
+            function setZoom(newSize) {
+                cellSize = Math.max(8, Math.min(60, newSize));
+                document.getElementById('zoom-level').textContent = cellSize + 'px';
+                draw();
+            }
+
+            document.getElementById('zoom-in').addEventListener('click', () => setZoom(cellSize + 2));
+            document.getElementById('zoom-out').addEventListener('click', () => setZoom(cellSize - 2));
+
+            // ==================== TOGGLES ====================
+            document.getElementById('crosshair-toggle').addEventListener('change', (e) => {
+                showCrosshair = e.target.checked;
+                draw();
+            });
+
+            document.getElementById('region-toggle').addEventListener('change', (e) => {
+                showRegions = e.target.checked;
+                legend.classList.toggle('hidden', !showRegions && !qrData);
+                draw();
+            });
+
+            // ==================== GENERATE ====================
+            generateBtn.addEventListener('click', generateQR);
+            inputEl.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') generateQR();
+            });
+
+            // ==================== EXPORT ====================
+            document.getElementById('export-btn').addEventListener('click', () => {
+                if (!qrData) return;
+                // Temporarily remove crosshair for clean export
+                const prevRow = hoverRow, prevCol = hoverCol;
+                hoverRow = -1; hoverCol = -1;
+                draw();
+
+                const link = document.createElement('a');
+                link.download = `qr-grid-${qrModuleCount}x${qrModuleCount}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+
+                hoverRow = prevRow; hoverCol = prevCol;
+                draw();
+            });
+
+            document.getElementById('print-btn').addEventListener('click', () => {
+                if (!qrData) return;
+                const prevRow = hoverRow, prevCol = hoverCol;
+                hoverRow = -1; hoverCol = -1;
+                draw();
+                window.print();
+                hoverRow = prevRow; hoverCol = prevCol;
+                draw();
+            });
+
+            // ==================== KEYBOARD SHORTCUTS ====================
+            document.addEventListener('keydown', (e) => {
+                // Don't trigger shortcuts when typing in input
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+
+                switch (e.key) {
+                    case '+':
+                    case '=':
+                        e.preventDefault();
+                        setZoom(cellSize + 2);
+                        break;
+                    case '-':
+                    case '_':
+                        e.preventDefault();
+                        setZoom(cellSize - 2);
+                        break;
+                    case 'r':
+                    case 'R':
+                        e.preventDefault();
+                        const regionToggle = document.getElementById('region-toggle');
+                        regionToggle.checked = !regionToggle.checked;
+                        regionToggle.dispatchEvent(new Event('change'));
+                        break;
+                    case 'c':
+                    case 'C':
+                        e.preventDefault();
+                        const crosshairToggle = document.getElementById('crosshair-toggle');
+                        crosshairToggle.checked = !crosshairToggle.checked;
+                        crosshairToggle.dispatchEvent(new Event('change'));
+                        break;
+                    case 'p':
+                    case 'P':
+                        e.preventDefault();
+                        document.getElementById('print-btn').click();
+                        break;
+                    case 'e':
+                    case 'E':
+                        e.preventDefault();
+                        document.getElementById('export-btn').click();
+                        break;
+                }
+            });
+        })();
+    </script>
+</body>
+</html>
